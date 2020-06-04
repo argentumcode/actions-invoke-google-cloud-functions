@@ -1,0 +1,26 @@
+name: 'invoke-google-cloud-functions'
+description: 'Invoke google cloud functions http trigger with service account credentials'
+inputs:
+  service_account_key:
+    description: "Service Account key"
+    required: false
+  url:
+    description: "Function URL"
+    required: true
+  skip_request:
+    description: "Get token only"
+    required: false
+  path:
+    description: "Request path"
+    required: false
+    default: ""
+  payload:
+    description: "POST payload"
+    required: false
+    default: ""
+  content_type:
+    description: "Payload Content Type"
+    required: false
+runs:
+  using: 'node12'
+  main: 'dist/index.js'

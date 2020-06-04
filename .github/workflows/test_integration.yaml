@@ -1,0 +1,87 @@
+name: Integration test
+on:
+  - push
+
+jobs:
+  with_service_account_key:
+    name: Test call with Service Account Key
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04, ubuntu-18.04, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: test with raw service account
+        id: raw_sa
+        uses: ./
+        with:
+          service_account_key: ${{ secrets.RAW_SERVICE_ACCOUNT_KEY }}
+          url: ${{ secrets.FUNCTION_URL }}
+
+      - name: check output
+        run: |
+          echo "::error::unexpected output"
+          exit 1
+        if: steps.raw_sa.outputs.data !=  'OK'
+
+      - name: test with base64 service account
+        id: base64_sa
+        uses: ./
+        with:
+          service_account_key: ${{ secrets.B64_SERVICE_ACCOUNT_KEY }}
+          url: ${{ secrets.FUNCTION_URL }}
+          payload: |
+            {"message": "custom"}
+          content_type: "application/json"
+
+      - name: check output
+        run: |
+          echo "::error::unexpected output"
+          exit 1
+        if: steps.base64_sa.outputs.data != 'custom'
+
+      - name: test skip request with service account
+        id: skip_request
+        uses: ./
+        with:
+          service_account_key: ${{ secrets.RAW_SERVICE_ACCOUNT_KEY }}
+          url: ${{ secrets.FUNCTION_URL }}
+          skip_request: true
+
+      - name: check skip request result
+        run: |
+          curl -H "Authorization: Bearer ${{steps.skip_request.outputs.token}}" "${{ secrets.FUNCTION_URL }}" --fail
+
+  with_gcloud:
+    name: Test call with gcloud
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04, ubuntu-18.04, windows-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+        with:
+          export_default_credentials: true
+          service_account_key:  ${{ secrets.RAW_SERVICE_ACCOUNT_KEY }}
+
+      - name: test with google default credentials
+        id: raw_sa
+        uses: ./
+        with:
+          url: ${{ secrets.FUNCTION_URL }}
+
+      - name: check output
+        run: |
+          echo "::error::unexpected output"
+          exit 1
+        if: steps.raw_sa.outputs.data !=  'OK'
